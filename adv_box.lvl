@@ -1,0 +1,17 @@
+#domain
+hospital
+#levelname
+adv_box_problem
+#colors
+blue: 0, B
+#initial
++++++++++++++++++
++0              +
++          B    +
++++++++++++++++++
+#goal
++++++++++++++++++
++        B      +
++               +
++++++++++++++++++
+#end

@@ -1,0 +1,51 @@
+import networkx as nx
+import pygame
+from sprites import *
+from graph_parser import *
+import random
+import sys
+
+def visualize():
+    size = width, height = 480, 480
+    screen = pygame.display.set_mode(size) 
+    frame = 0
+    while 1:            
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: sys.exit()
+
+        if frame/16 in late_humans.keys():
+            sprite_humans.add(late_humans[frame/16])
+
+        for h in sprite_humans:
+            #When the goal is reached (empty plan) the object is removed from the group (e.g. not plotted)
+            if h.plan == []:
+                sprite_humans.remove(h)
+            else:
+                #Only take an action when the object has reached a new field (16*1 pixels)
+                if (h.rect.top % 16 == 0) & (h.rect.left % 16 == 0): #frame%16 == 0:
+                    #if collision(h1, r):
+                    ##    h1.replan()
+                    #    r.replan()
+                   # else:
+                    h.act()
+                    #r.act()
+                if h.time_to_next==23:
+                    if frame%3 < 2:
+                        h.rect = h.rect.move(h.speed)
+                else:
+                    h.rect = h.rect.move(h.speed)
+
+        screen.fill((220,200,200))
+        sprite_walls.draw(screen)
+        sprite_humans.draw(screen)
+
+        pygame.time.delay(50)
+        pygame.display.update()
+
+
+        frame += 1 #update frame number
+                
+                
+                
+                
+                
