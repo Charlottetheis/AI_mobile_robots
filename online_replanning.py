@@ -13,23 +13,18 @@ def replan(state, humans, time):
     frontier = PriorityQueue()
     explored = {state}
     
-    print(state)
-    print(humans)
-    print(time)
-    print(conflict) 
+
     
     agents_in_conflict, agents_not_in_conflict = conflict(state,humans,time)
-    print(agents_in_conflict)
+
     
     paths = []
     for agent in agents_in_conflict:
         path = agent.plan_to_path()
-        print('path' + str(path))
         paths.append(path[time-agent.start_time+1:])
     
     heuristic = manhattan_to_path(agents_in_conflict, paths)
     
-    print('Paths: ' + str(paths))
     children = get_children(state, agents_in_conflict, agents_not_in_conflict)
     
     for child in children:
@@ -39,8 +34,8 @@ def replan(state, humans, time):
     
     while frontier.qsize() > 0:
         _,leaf = frontier.get()
-        print('time: ' + str(leaf.g))
-        print('agnet locations: ' + str([(agent,leaf.agent_locations[agent]) for agent in agents_in_conflict]))
+        #print('time: ' + str(leaf.g))
+        #print('agnet locations: ' + str([(agent,leaf.agent_locations[agent]) for agent in agents_in_conflict]))
         
         if all([leaf.agent_locations[agent] in paths[i] for i, agent in enumerate(agents_in_conflict)]):
             #counting the number of steps in the path that can be discarded
@@ -65,12 +60,9 @@ def conflict(state, humans, time):
         for h2 in range(h1+1,len(humans)):
             res1 = humans[h1].get_resources(state,time)
             res2 = humans[h2].get_resources(state,time)
-            print('resource1' + str(res1))
-            print('resource2' + str(res2))
             if any([coor in res1 for coor in res2]):
                 human1 = humans[h1]
                 human2 = humans[h2]
-                print('action ' + str(human1.plan[time-human1.start_time]) + ' in conflict with action ' + str(human2.plan[time-human2.start_time]))
                 agents_in_conflict.append(humans[h1])
                 agents_in_conflict.append(humans[h2])
                 
@@ -89,7 +81,7 @@ def get_children(state, agents_in_conflict, agents_not_in_conflict):
         actions.append(gen_actions(agent, state))
     combinations = product(*actions)
     for combo in combinations:
-        precond = {element for element in chain.from_iterable([action.preconditions() for action in combo])}
+        precond = {element for element in chain.from_iterable([action.preconditions(state) for action in combo])}
         actions_no_conflict = [agent.plan[state.g-agent.start_time] for agent in agents_not_in_conflict \
                                 if ((len(agent.plan)-1+agent.start_time) >= state.g) and (agent.start_time <= state.g)] 
         

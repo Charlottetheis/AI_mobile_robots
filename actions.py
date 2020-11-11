@@ -82,24 +82,40 @@ class MoveAction(Action):
         self.destination = direction.move(self.state.agent_locations[self.agent])
         self.box_destination = None
 
-    def preconditions(self):
-        return {Free(self.destination)}
+    def preconditions(self, state):
+        destination = self.direction.move(state.agent_locations[self.agent])
+        return {Free(destination)}
 
     def effects(self,state):
-        return [ AgentAt(self.agent, self.destination),
+        destination = self.direction.move(state.agent_locations[self.agent])
+        return [ AgentAt(self.agent, destination),
                  Not(AgentAt(self.agent, state.agent_locations[self.agent]))]
 
-    def get_box(self):
-        return None
-
-    def is_conflict(self, action):
-        if type(action)==NoOp:
+    def __lt__(self,other):
+        if type(other)==NoOp:
             return False
-        if self.destination == action.destination:
-            return True
-        if self.destination == action.box_destination:
-            return True
-        return False
+        return True
+
+    def __repr__(self):
+        return 'Move({})'.format(self.direction)
+    
+    
+class MoveActionRobot(Action):
+
+    def __init__(self, state, agent, direction):
+        self.agent = agent
+        self.direction = direction
+        self.state = state
+        self.destination = [direction.move((x,y)) for (x,y) in self.state.agent_locations[self.agent]]
+
+    def preconditions(self,state):
+        destination = [self.direction.move((x,y)) for (x,y) in state.agent_locations[self.agent]]
+        return {Free((x,y)) for (x,y) in destination}
+
+    def effects(self,state):
+        destination = [self.direction.move((x,y)) for (x,y) in state.agent_locations[self.agent]]
+        effects = [AgentAt(self.agent, (x,y)) for (x,y) in destination] + [Not(AgentAt(self.agent, (x,y))) for (x,y) in state.agent_locations[self.agent]]
+        return effects
 
     def __lt__(self,other):
         if type(other)==NoOp:
@@ -116,7 +132,7 @@ class Enter(Action):
         self.agent = agent
         self.destination = agent.start_pos
         
-    def preconditions(self):
+    def preconditions(self,state):
         return {Free(self.destination), AgentAt(self.agent, (-1,-1))}
     
     def effects(self, state):

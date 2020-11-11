@@ -13,11 +13,10 @@ def parse_map(s):
     lines = s.splitlines()
 
     # Map the nodes as a graph
-    x_dim = len(lines)
-    y_dim = len(lines[0])
+    y_dim = len(lines)
+    x_dim = len(lines[0])
     G = nx.grid_2d_graph(x_dim,y_dim)
     
-
 
     # create wall sprite for visualization
     walls = pygame.sprite.RenderUpdates()
@@ -33,6 +32,10 @@ def parse_map(s):
                 G.nodes[(x,y)]['type'] = 's'
             elif char == ' ':
                 G.nodes[(x,y)]['type'] = 'f'
+            elif char == 'b':
+                G.nodes[(x,y)]['type'] = 'b'
+                
+                
                 
    # G.add_edges_from([((x, y), (x+1, y+1)) for x in range(x_dim-1) for y in range(y_dim-1) 
     #                  if ((x,y+1) in G.nodes and (x+1,y) in G.nodes and (x,y) in G.nodes and (x+1,y+1) in G.nodes)] 

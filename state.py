@@ -73,5 +73,8 @@ class State():
     def __lt__(self, other):
         # This is used when adding States to a priority queue, to make agents not
         # contributing to the heuristic to prefer standing still
-        return True              
+        if any([type(action)==NoOp for action in self.action]):
+            return False
+        else:
+            return True              
       

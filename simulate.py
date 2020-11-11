@@ -23,20 +23,36 @@ def simulate(m,viz=False):
     #entrance and exit positions
     entrance_pos = [(x,y) for (x,y),att in G.nodes('type') if att=='e']
     
-    free_predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s']}
+    predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b']}
+    
+    bed_locations = [(x,y) for (x,y),att in G.nodes('type') if att=='b']
+    #placing random obstacles
+    bed_id = 0
+    beds = []
     object_locations = dict()
+    for i in range(20):
+        x,y = bed_locations[random.randint(0,len(bed_locations)-1)]
+        bed_position = [(x,y),(x+1,y),(x,y+1),(x+1,y+1),(x,y+2),(x+1,y+2)]
+        if all([Free(coor) in predicates for coor in bed_position]):
+            predicates.difference_update([Free(coor) for coor in bed_position])
+            b = bed(bed_id, bed_position)
+            predicates.add(ObjectAt(b, bed_position))
+            object_locations[b] = bed_position
+            beds.append(b)
+            bed_id += 1
+    
+    
     
     humans = []
     human_id = 0
     #alloctae a random destination to humans
     for start in start_pos:
-        preds = free_predicates.copy()
-        preds.add(AgentAt(human_id, start))
-        
-        
         goal = entrance_pos[random.randint(0,len(entrance_pos)-1)] #assign a random goal
         
         h = human(human_id, start_pos=start, start_time=0, goal=goal)
+                
+        preds = predicates.copy()
+        preds.add(AgentAt(h, start))
         
         state = State(G, 0, preds, {h: start}, object_locations)
         plan = offline_search(state, h, start, goal, manhattan(h, goal)) #calculate path to goal
@@ -45,7 +61,6 @@ def simulate(m,viz=False):
         humans.append(h) #human objects
         human_id += 1
     
-    times_taken = [] #to keep track of no humans entering at the same time
     for i in range(10):
         goal = start = (0,0)
         #the distance between start and end must be more than 5
@@ -62,7 +77,7 @@ def simulate(m,viz=False):
         
         h = human(human_id, start_pos=start, start_time=time, goal=goal)
         
-        preds = free_predicates.copy()
+        preds = predicates.copy()
         preds.add(AgentAt(h, start))
         state = State(G, 0, preds, {h: start}, object_locations)
         plan = offline_search(state, h, start, goal, manhattan(h, goal)) #calculate path to goal
@@ -71,11 +86,19 @@ def simulate(m,viz=False):
         humans.append(h) #human objects
         human_id += 1
     
+    ############## Initialize robot #############################
+    free_predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b']}
+    #r = robot()
+    
+    
+    
+    
+    
     ############### online part #################################
     not_finished = True
     conflict_count = 0
     t = 0
-    preds = free_predicates.copy()
+    preds = predicates.copy()
     agent_locations = dict()             
     for h in humans:
         preds.add(AgentAt(h,(-1,-1)))
@@ -84,33 +107,32 @@ def simulate(m,viz=False):
     
     while not_finished:
         actions_t = [h.plan[t-h.start_time] for h in humans if ((len(h.plan)-1+h.start_time) >= t) & (h.start_time <= t)]
-        print(actions_t)
         if len(actions_t) == 0:
             not_finished = False
         else:
-            preconditions = [action.preconditions() for action in actions_t]
+            preconditions = [action.preconditions(state) for action in actions_t]
             destinations = [action.destination for action in actions_t if type(action)!=Leave]
-            print('preconditions: ' + str(preconditions))
-            print('does the precond hold: ' + str([precond in state.predicates for precond in chain.from_iterable(preconditions)]))
-            print('destinations: ' + str(destinations))
+            #print('preconditions: ' + str(preconditions))
+            #print('does the precond hold: ' + str([precond in state.predicates for precond in chain.from_iterable(preconditions)]))
+            #print('destinations: ' + str(destinations))
             
             if all([precond in state.predicates for precond in chain.from_iterable(preconditions)]) \
                                 & (len(destinations) == len(set(destinations))):
-                print('Time: ' + str(t) + ' no conflicts')
+                #print('Time: ' + str(t) + ' no conflicts')
                 state = state.derive_state(actions_t)
                 t += 1
             else:
-                print('replanning at time: ' + str(t))
+                #print('replanning at time: ' + str(t))
                 humans_replanned, actions, back_at_path = replan(state,humans,t)
                 for i, h in enumerate(humans_replanned):
                     new_actions = [action[i] for action in actions]
-                    print('new actions: ' + str(new_actions))
-                    print('new actions preconditions: ' + str([action.preconditions() for action in new_actions]))
-                    print('back at path: ' + str(back_at_path[i]))
+                    #print('new actions: ' + str(new_actions))
+                    #print('new actions preconditions: ' + str([action.preconditions() for action in new_actions]))
+                    #print('back at path: ' + str(back_at_path[i]))
                     del h.plan[t-h.start_time:back_at_path[i]+t-h.start_time]
                     h.plan[t-h.start_time:t-h.start_time] = new_actions
                     
-                    print('precondition for: ' + str(h) + ' at time: ' + str(t) + ': ' + str(h.plan[t-h.start_time].preconditions()))
+                    #print('precondition for: ' + str(h) + ' at time: ' + str(t) + ': ' + str(h.plan[t-h.start_time].preconditions()))
             
             
         #for h1 in range(len(resources)):
@@ -159,11 +181,19 @@ def simulate(m,viz=False):
     
     #visualization module
     if viz:
-        size = width, height = 480, 480
+        size = width, height = 526, 480
         screen = pygame.display.set_mode(size) 
         frame = 0
         
         sprite_humans = pygame.sprite.RenderUpdates()
+        
+        sprite_beds = []
+        for b in beds:
+            sprite_beds.append(bed_sprite(b.position))
+        
+        sprite_objects = pygame.sprite.RenderUpdates(sprite_beds)
+        
+       
 
         while 1:            
             for event in pygame.event.get():
@@ -189,6 +219,7 @@ def simulate(m,viz=False):
 
             screen.fill((220,200,200))
             sprite_walls.draw(screen)
+            sprite_objects.draw(screen)
             sprite_humans.draw(screen)
             
             pygame.time.delay(50)

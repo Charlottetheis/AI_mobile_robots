@@ -20,6 +20,17 @@ class AgentAt(predicate):
     def __hash__(self):
         return hash(('agentat',self.agent, self.coordinate))
     
+class ObjectAt(predicate):
+    def __init__(self, object_id, coordinate):
+        self.id = object_id
+        self.coordinate = coordinate
+     
+    def __repr__(self):
+        return 'ObjectAt({}, {})'.format(self.id, self.coordinate)
+
+    def __hash__(self):
+        return hash(('objecttat',self.id, *self.coordinate))
+    
     
 class Not(predicate):
     def __init__(self, pred):

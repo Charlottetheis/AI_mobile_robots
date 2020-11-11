@@ -6,6 +6,7 @@ from heuristics import *
 from state import *
 from queue import PriorityQueue
 from actions import *
+from objects import *
 
 
 
@@ -39,9 +40,12 @@ def offline_search(state, agent, start, goal, heuristic):
     
 def get_children(state, agent):
     children = []
-    directions = [N(), S(), E(), W()]  
+    directions = [N(), S(), E(), W()]
     for direction in directions:
-        action = MoveAction(state, agent, direction)
+        if type(agent) == human:
+            action = MoveAction(state, agent, direction)
+        else:
+            action = MoveActionRobot(state, agent, direction)
         if action.preconditions().issubset(state.predicates):
             child = state.derive_state([action])
             children.append(child)          
