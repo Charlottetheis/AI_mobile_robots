@@ -34,6 +34,11 @@ def parse_map(s):
                 G.nodes[(x,y)]['type'] = 'f'
             elif char == 'b':
                 G.nodes[(x,y)]['type'] = 'b'
+            elif char == 'r':
+                G.nodes[(x,y)]['type'] = 'r'
+            else:
+                G.nodes[(x,y)]['type'] = 'goal'
+                G.nodes[(x,y)]['number'] = int(char)
                 
                 
                 

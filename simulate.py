@@ -22,8 +22,12 @@ def simulate(m,viz=False):
     start_pos = [(x,y) for (x,y),att in G.nodes('type') if att=='s']
     #entrance and exit positions
     entrance_pos = [(x,y) for (x,y),att in G.nodes('type') if att=='e']
+    #robot start positions
+    robot_start = [(x,y) for (x,y),att in G.nodes('type') if att=='r']
+    #robot goal positions
+    robot_goals = [(x,y) for (x,y),att in G.nodes('type') if att=='goal']
     
-    predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b']}
+    predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b','goal','r']}
     
     bed_locations = [(x,y) for (x,y),att in G.nodes('type') if att=='b']
     #placing random obstacles
@@ -55,7 +59,7 @@ def simulate(m,viz=False):
         preds.add(AgentAt(h, start))
         
         state = State(G, 0, preds, {h: start}, object_locations)
-        plan = offline_search(state, h, start, goal, manhattan(h, goal)) #calculate path to goal
+        plan = offline_search(state, h, goal, manhattan(h, goal)) #calculate path to goal
         
         h.plan = [Enter(h)] + plan + [Leave(h)]
         humans.append(h) #human objects
@@ -80,29 +84,48 @@ def simulate(m,viz=False):
         preds = predicates.copy()
         preds.add(AgentAt(h, start))
         state = State(G, 0, preds, {h: start}, object_locations)
-        plan = offline_search(state, h, start, goal, manhattan(h, goal)) #calculate path to goal
+        plan = offline_search(state, h, goal, manhattan(h, goal)) #calculate path to goal
         
         h.plan = [Enter(h)] + plan + [Leave(h)]
         humans.append(h) #human objects
         human_id += 1
     
-    ############## Initialize robot #############################
-    free_predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b']}
-    #r = robot()
     
+    
+    
+    ############## Initialize robot #############################
+    free_predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b','goal','r']}
+    start_pos=robot_start[0]
+    r = robot(0, start_pos, start_time=0, offline_plan=[])
+    start = start_pos
+    for i in range(1,len(robot_goals)+2):
+        preds = free_predicates.copy()
+        preds.update([AgentAt(r, (x,y)) for (x,y) in r.get_full(start)])
+        preds.difference_update([Free((x,y)) for (x,y) in r.get_full(start)])
+        state = State(G, 0, preds, {r: r.get_full(start)}, object_locations)
+        if i == len(robot_goals)+1:
+            goal = r.get_full(start_pos)
+        else:
+            goal = [coor for coor in robot_goals if G.nodes('number')[coor] == i]
+            goal = r.get_full(goal[0])
+        plan = offline_search(state, r, goal, manhattan_robot(r, goal)) #calculate path to goal
+        r.plan+=plan  
+        start = goal[0]
     
     
     
     
     ############### online part #################################
     not_finished = True
-    conflict_count = 0
     t = 0
     preds = predicates.copy()
     agent_locations = dict()             
     for h in humans:
         preds.add(AgentAt(h,(-1,-1)))
         agent_locations[h] = (-1,-1)
+    preds.update([AgentAt(r, (x,y)) for (x,y) in r.get_full(start_pos)])
+    preds.difference_update([Free((x,y)) for (x,y) in r.get_full(start_pos)])
+    agent_locations[r] = r.get_full(start_pos)
     state = State(G,0,preds,agent_locations,object_locations)
     
     while not_finished:
@@ -193,6 +216,10 @@ def simulate(m,viz=False):
         
         sprite_objects = pygame.sprite.RenderUpdates(sprite_beds)
         
+        plan = r.plan.copy()
+        plan.reverse()
+        sprite_robot = robot_sprite(plan, r.start_pos, r.start_time)
+        sprite_robots = pygame.sprite.RenderUpdates(sprite_robot)
        
 
         while 1:            
@@ -213,14 +240,22 @@ def simulate(m,viz=False):
                 #Only take an action when the object has reached a new field (16*16 pixels)
                 elif frame%16 == 0: #(h.rect.top % 16 == 0) & (h.rect.left % 16 == 0): #
                     h.act()
-                    #r.act()
                 #move all objects
                 h.rect = h.rect.move(h.speed)
-
+            
+            for r in sprite_robots:
+                if h.plan == []:
+                    sprite_humans.remove(h)
+                    continue
+                elif frame%16==0:
+                    r.act()
+                r.rect = r.rect.move(r.speed)
+            
             screen.fill((220,200,200))
             sprite_walls.draw(screen)
             sprite_objects.draw(screen)
             sprite_humans.draw(screen)
+            sprite_robots.draw(screen)
             
             pygame.time.delay(50)
             pygame.display.update()

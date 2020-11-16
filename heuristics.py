@@ -2,8 +2,13 @@ def manhattan(agent, goal):
     def h(state):
         location = state.agent_locations[agent]
         return abs(location[0]-goal[0]) + abs(location[1]-goal[1])
-    return h     
+    return h
 
+def manhattan_robot(agent, goal):
+    def h(state):
+        location = state.agent_locations[agent]
+        return abs(location[0][0]-goal[0][0]) + abs(location[0][1]-goal[0][1])
+    return h
 
 def calculate_manhattan_sum(starts, goals):
     dists = [abs(starts[agent][0]-goals[agent][0]) + abs(starts[agent][1]-goals[agent][1]) for agent in range(len(goals))]

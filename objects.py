@@ -70,27 +70,27 @@ class robot():
             return []
         else: 
             action = self.plan[time-self.start_time]
-            resources = [state.agent_locations[self]]
+            resources = state.agent_locations[self]
             if type(action) == MoveAction:
-                resources.append(action.direction.move(state.agent_locations[self]))
+                resources.append(self.get_full(action.direction.move(state.agent_locations[self][0])))
             elif type(action) == Enter:
-                resources = [self.start_pos]
+                resources = [self.get_full(self.start_pos)]
             return resources
        
     def plan_to_path(self):
-        position = (-1,-1)
         path = []
+        position = []
         for time in range(len(self.plan)): 
-            path.append(position)
             if type(self.plan[time]) == NoOp:
                 continue
             else:
                 position = self.plan[time].destination
-        path.append((-1,-1))
+            path.append(position)
         return path
     
-    def replan(self):
-        return True
+    def get_full(self, coor):
+        return [coor,tuple(sum(x) for x in zip((1,0),coor)),\
+                tuple(sum(x) for x in zip((0,1),coor)),tuple(sum(x) for x in zip((1,1),coor))]
     
     
     def __repr__(self):

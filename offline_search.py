@@ -10,7 +10,7 @@ from objects import *
 
 
 
-def offline_search(state, agent, start, goal, heuristic):
+def offline_search(state, agent, goal, heuristic):
     
     frontier = PriorityQueue()
     explored = {state}
@@ -27,7 +27,8 @@ def offline_search(state, agent, start, goal, heuristic):
         _,leaf = frontier.get()
         if leaf.agent_locations[agent] == goal:
             return backtrack(leaf)
-        
+        elif len(goal)==4 and all([(x,y) in goal for (x,y) in leaf.agent_locations[agent]]):
+            return backtrack(leaf)
         
         children = get_children(leaf, agent)
         for child in children:
@@ -35,7 +36,6 @@ def offline_search(state, agent, start, goal, heuristic):
                 explored.add(child)
                 node = (heuristic(child)+child.g, child)
                 frontier.put(node)
-                
     return 'Error'
     
 def get_children(state, agent):
@@ -46,7 +46,7 @@ def get_children(state, agent):
             action = MoveAction(state, agent, direction)
         else:
             action = MoveActionRobot(state, agent, direction)
-        if action.preconditions().issubset(state.predicates):
+        if action.preconditions(state).issubset(state.predicates):
             child = state.derive_state([action])
             children.append(child)          
 

@@ -1,6 +1,8 @@
 from predicates import *
 import copy
 from actions import *
+from objects import *
+import copy
 
 
 class State():
@@ -36,9 +38,18 @@ class State():
     def update_locations(self,predicates):
         new_agent_locations = self.agent_locations.copy()
         new_object_locations = self.object_locations.copy()
+        
+        for agent in new_agent_locations:
+            if type(agent) == robot:
+                new_agent_locations[agent] = new_agent_locations[agent].copy()
+        
         for pred in predicates:
-            if type(pred) == AgentAt:
-                new_agent_locations[pred.agent] = pred.coordinate   
+            if (type(pred) == AgentAt) and (type(pred.agent) == robot):
+                new_agent_locations[pred.agent].append(pred.coordinate)
+            elif (type(pred) == Not) and (type(pred.pred.agent) == robot):
+                new_agent_locations[pred.pred.agent].remove(pred.pred.coordinate)
+            elif (type(pred) == AgentAt):
+                new_agent_locations[pred.agent] = pred.coordinate
             else:
                 continue
                 

@@ -55,7 +55,7 @@ class NoOp():
         self.agent = agent
         self.destination = state.agent_locations[self.agent]
         
-    def preconditions(self):
+    def preconditions(self,state):
         return {}
 
     def effects(self,state):
@@ -110,11 +110,11 @@ class MoveActionRobot(Action):
 
     def preconditions(self,state):
         destination = [self.direction.move((x,y)) for (x,y) in state.agent_locations[self.agent]]
-        return {Free((x,y)) for (x,y) in destination}
+        return {Free((x,y)) for (x,y) in destination if (x,y) not in state.agent_locations[self.agent]}
 
     def effects(self,state):
         destination = [self.direction.move((x,y)) for (x,y) in state.agent_locations[self.agent]]
-        effects = [AgentAt(self.agent, (x,y)) for (x,y) in destination] + [Not(AgentAt(self.agent, (x,y))) for (x,y) in state.agent_locations[self.agent]]
+        effects = [AgentAt(self.agent, (x,y)) for (x,y) in destination if (x,y) not in state.agent_locations[self.agent]] + [Not(AgentAt(self.agent, (x,y))) for (x,y) in state.agent_locations[self.agent] if (x,y) not in destination]
         return effects
 
     def __lt__(self,other):
@@ -123,7 +123,7 @@ class MoveActionRobot(Action):
         return True
 
     def __repr__(self):
-        return 'Move({})'.format(self.direction)
+        return 'MoveRobot({})'.format(self.direction)
 
     
 class Enter(Action):
@@ -154,7 +154,7 @@ class Leave(Action):
         self.agent = agent
         self.destination = (-1,-1)
         
-    def preconditions(self):
+    def preconditions(self,state):
         return {AgentAt(self.agent, self.agent.goal)}
     
     def effects(self, state):
