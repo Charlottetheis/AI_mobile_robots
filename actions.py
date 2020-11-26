@@ -54,6 +54,7 @@ class NoOp():
     def __init__(self, state, agent):
         self.agent = agent
         self.destination = state.agent_locations[self.agent]
+        self.state = state
         
     def preconditions(self,state):
         return {}

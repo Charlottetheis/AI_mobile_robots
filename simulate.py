@@ -11,6 +11,7 @@ from state import *
 from offline_search import *
 from actions import *
 from online_replanning import *
+from online_replanning_robot import *
 from itertools import chain
 
 
@@ -30,21 +31,22 @@ def simulate(m,viz=False):
     predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b','goal','r']}
     
     bed_locations = [(x,y) for (x,y),att in G.nodes('type') if att=='b']
-    #placing random obstacles
+    object_locations = dict()
     bed_id = 0
     beds = []
-    object_locations = dict()
-    for i in range(20):
-        x,y = bed_locations[random.randint(0,len(bed_locations)-1)]
-        bed_position = [(x,y),(x+1,y),(x,y+1),(x+1,y+1),(x,y+2),(x+1,y+2)]
-        if all([Free(coor) in predicates for coor in bed_position]):
-            predicates.difference_update([Free(coor) for coor in bed_position])
-            b = bed(bed_id, bed_position)
-            predicates.add(ObjectAt(b, bed_position))
-            object_locations[b] = bed_position
-            beds.append(b)
-            bed_id += 1
-    
+    #placing random obstacles
+    if len(bed_locations) > 0:
+        for i in range(20):
+            x,y = bed_locations[random.randint(0,len(bed_locations)-1)]
+            bed_position = [(x,y),(x+1,y),(x,y+1),(x+1,y+1),(x,y+2),(x+1,y+2)]
+            if all([Free(coor) in predicates for coor in bed_position]):
+                predicates.difference_update([Free(coor) for coor in bed_position])
+                b = bed(bed_id, bed_position)
+                predicates.add(ObjectAt(b, bed_position))
+                object_locations[b] = bed_position
+                beds.append(b)
+                bed_id += 1
+
     
     
     humans = []
@@ -109,15 +111,19 @@ def simulate(m,viz=False):
             goal = [coor for coor in robot_goals if G.nodes('number')[coor] == i]
             goal = r.get_full(goal[0])
         plan = offline_search(state, r, goal, manhattan_robot(r, goal)) #calculate path to goal
-        r.plan+=plan  
+        r.plan+=plan 
+        r.goal.append(set(goal))
         start = goal[0]
     
-    
-    
+    #update the permanent offline/global plan
+    r.global_path = r.plan_to_path()
+    r.global_plan = r.plan.copy()
     
     ############### online part #################################
     not_finished = True
     t = 0
+    
+    #initialize state
     preds = predicates.copy()
     agent_locations = dict()             
     for h in humans:
@@ -129,78 +135,116 @@ def simulate(m,viz=False):
     state = State(G,0,preds,agent_locations,object_locations)
     
     while not_finished:
-        actions_t = [h.plan[t-h.start_time] for h in humans if ((len(h.plan)-1+h.start_time) >= t) & (h.start_time <= t)]
-        if len(actions_t) == 0:
+        # Finished robot plan
+        if len(r.plan) <= t:
             not_finished = False
         else:
-            preconditions = [action.preconditions(state) for action in actions_t]
-            destinations = [action.destination for action in actions_t if type(action)!=Leave]
-            #print('preconditions: ' + str(preconditions))
-            #print('does the precond hold: ' + str([precond in state.predicates for precond in chain.from_iterable(preconditions)]))
-            #print('destinations: ' + str(destinations))
+            # replanning in case obstacle moved
+            if t in r.obstacle:
+                obstacle_coors = [Free(x) for x in r.obstacle[t]]
+                if all([coor in state.predicates for coor in obstacle_coors]):
+                    print('obstacle has moved at time ' + str(t))
+                    r, new_actions, back_at_path = replan_robot(state, r, t, \
+                                                                global_plan=r.previous_plan)
+                    print('New actions robot ' +str(new_actions))
+                    print('Back at path robot ' +str(back_at_path))
+                    if (new_actions!=None) and ((back_at_path+t)<r.back_at_global_path[t]):
+                        new_actions = [action[0] for action in new_actions]
+                        # Update the current plan
+                        del r.plan[t-r.start_time:]
+                        r.plan += new_actions
+                        r.plan += r.previous_plan[t+back_at_path:]
+                        r.previous_plan = r.plan.copy()
+                        
+                        
+                        
+                        #update history
+                        for i in range(t,r.detour[t][1]):
+                            del r.obstacle[i]
+                            del r.detour[i]
+                            del r.back_at_global_path[i]
+                        r.replanning[t] = r.plan_to_path()
             
+            
+            else:        
+                # Replanning for robots in case of objects in path
+                human_loc = [pred.coordinate for pred in state.predicates if (type(pred)==AgentAt) and (pred.agent!=r)]
+                object_loc = [pred.coordinate for pred in state.predicates if (type(pred)==ObjectAt)]
+                all_loc = human_loc + [coor for coor in chain.from_iterable(object_loc)]
+                r_path = r.plan_to_path()
+                r_path = r_path[t+1:t+4]
+                if any([coor in chain.from_iterable(r_path) for coor in all_loc]):
+
+                    print('Something in robot path at ' + str(t))
+
+                    r, new_actions, back_at_path = replan_robot(state, r, t)
+                    if new_actions == None:
+                        new_actions = [NoOp(state, r)]*4
+                    else:
+                        new_actions = [action[0] for action in new_actions]
+                    print('New actions robot ' +str(new_actions))
+                    print('Back at path robot ' +str(back_at_path))
+
+                    # Update the current plan
+                    r.previous_plan = r.plan.copy()
+                    del r.plan[t-r.start_time:back_at_path+t-r.start_time]
+                    r.plan[t-r.start_time:t-r.start_time] = new_actions
+
+                    #update history
+                    obs_coor = [coor for coor in all_loc if (coor in chain.from_iterable(r_path))]
+                    for i in range(0,len(new_actions)):
+                        r.obstacle[t+i] = obs_coor 
+                        r.detour[t+i] = [t,t+len(new_actions)] #[start,finish]
+                        r.back_at_global_path[t+i] = t+back_at_path
+                    r.replanning[t] = r.plan_to_path()
+
+            #All actions at time t
+            actions_t = [h.plan[t-h.start_time] for h in humans if ((len(h.plan)-1+h.start_time) >= t) & (h.start_time <= t)]
+            actions_t += [r.plan[t]] 
+            
+            # Checking consistency
+            preconditions = [action.preconditions(state) for action in actions_t]
+            destinations = [action.destination for action in actions_t[0:-1] if type(action)!=Leave]
+            destinations += actions_t[-1].destination
+            print('preconditions: ' + str(preconditions))
+            print('does the precond hold: ' + str([precond in state.predicates for precond in chain.from_iterable(preconditions)]))
+            print('destinations: ' + str(destinations))
+            print('agent locations ' + str(state.agent_locations))
+            
+            #If consistent update state
             if all([precond in state.predicates for precond in chain.from_iterable(preconditions)]) \
                                 & (len(destinations) == len(set(destinations))):
                 #print('Time: ' + str(t) + ' no conflicts')
+                
+                #calculate conflicts three timesteps ahead
+                #if there are conflicts: Replan around them 
+                
                 state = state.derive_state(actions_t)
                 t += 1
+            
             else:
-                #print('replanning at time: ' + str(t))
-                humans_replanned, actions, back_at_path = replan(state,humans,t)
-                for i, h in enumerate(humans_replanned):
-                    new_actions = [action[i] for action in actions]
-                    #print('new actions: ' + str(new_actions))
-                    #print('new actions preconditions: ' + str([action.preconditions() for action in new_actions]))
-                    #print('back at path: ' + str(back_at_path[i]))
-                    del h.plan[t-h.start_time:back_at_path[i]+t-h.start_time]
-                    h.plan[t-h.start_time:t-h.start_time] = new_actions
-                    
-                    #print('precondition for: ' + str(h) + ' at time: ' + str(t) + ': ' + str(h.plan[t-h.start_time].preconditions()))
+                # Replanning with two humans or one human+passive robot
+                # The robot stps when a human is very close to it
+                print('replanning at time: ' + str(t))
+                agents = humans + [r]
+                agents_replanned, actions, back_at_path = replan(state,agents,t)
+                print('agents replanned ' + str(agents_replanned))
+                for i, h in enumerate(agents_replanned):
+                    if type(h)==robot:
+                        h.plan[t-h.start_time:t-h.start_time] = [NoOp(state, h),NoOp(state, h),NoOp(state, h),NoOp(state, h)]
+                    else:
+                        if actions != None:
+                            new_actions = [action[i] for action in actions]
+
+                            del h.plan[t-h.start_time:back_at_path[i]+t-h.start_time]
+                        else:
+                            new_actions = [NoOp(state, h)]
+                        #print('new actions: ' + str(new_actions))
+                        #print('new actions preconditions: ' + str([action.preconditions(action.state) for action in new_actions]))
+                        #print('back at path: ' + str(back_at_path[i]))
+                        h.plan[t-h.start_time:t-h.start_time] = new_actions
+  
             
-            
-        #for h1 in range(len(resources)):
-        #    for h2 in range(h1+1, len(resources)):
-        #        if (any([coor in resources[h1] for coor in resources[h2]])):
-        #            print(str(h1)+ ' and ' + str(h2) + ' in conflict at time ' + str(t))
-                        
-    
-    
-    
-    
-    #finish_time = 0 
-    #for h in humans:
-     #   if finish_time < h.end:
-     #       finish_time = h.end
-            
-    #fix the human paths so that they do not overlap
-    #resources = []
-    #max_len = 0
-    #for h in humans:
-    #    res = h.get_resources()
-    #    resources.append(res)
-    #    if len(res) > max_len:
-    #        max_len = len(res)
-        
-   # not_finished = True
-   # conflict_count = 0
-   # t = 0
-   # while not_finished:
-   #     for j in range(len(resources)):
-   #         for k in range(j+1, len(resources)):
-   #             if (len(resources[k])>t) and (len(resources[j])>t) and (any([coor in resources[j][t] for coor in resources[k][t]])):
-   #                 conflict_count += 1
-   #                 print(str(k)+ ' and ' + str(j) + ' in conflict at time ' + str(t))
-   #                 resources[k].insert(t, resources[k][t-1])
-   #                 humans[k].plan.insert(t-humans[k].start_time,NoOp(k))
-#
-   #     if (max_len+conflict_count) < t:
-   #         not_finished = False
-   #     t +=1
-    
-    
-    #create a group for the sprites
-    #sprite_humans = pygame.sprite.RenderUpdates(humans)
-    
     
     #visualization module
     if viz:
@@ -218,9 +262,15 @@ def simulate(m,viz=False):
         
         plan = r.plan.copy()
         plan.reverse()
-        sprite_robot = robot_sprite(plan, r.start_pos, r.start_time)
+        sprite_robot = robot_sprite(plan, r.start_pos, r.start_time, r.obstacle)
         sprite_robots = pygame.sprite.RenderUpdates(sprite_robot)
-       
+        print(r.obstacle)
+        paths = []
+        for s in r.global_path:
+            [paths.append(path_sprite(coor)) for coor in s]
+        sprite_paths = pygame.sprite.RenderUpdates(paths)
+            
+        sprite_obstacles = pygame.sprite.RenderUpdates()
 
         while 1:            
             for event in pygame.event.get():
@@ -244,20 +294,36 @@ def simulate(m,viz=False):
                 h.rect = h.rect.move(h.speed)
             
             for r in sprite_robots:
-                if h.plan == []:
-                    sprite_humans.remove(h)
-                    continue
-                elif frame%16==0:
-                    r.act()
+                if frame%16==0:
+                    sprite_obstacles.empty()
+                    if r.plan == []:
+                        r.speed = [0,0]
+                    else:
+                        r.act()
+                        if (frame/16) in r.obstacle:
+                            sprite_obstacles.add([obstacle_sprite(o) for o in r.obstacle[frame/16]])
+                            print('obstacle' + str(r.obstacle[frame/16]))
                 r.rect = r.rect.move(r.speed)
             
             screen.fill((220,200,200))
             sprite_walls.draw(screen)
+            sprite_paths.draw(screen)
             sprite_objects.draw(screen)
             sprite_humans.draw(screen)
+            sprite_obstacles.draw(screen)
             sprite_robots.draw(screen)
             
-            pygame.time.delay(50)
+            pygame.font.init()
+            myFont = pygame.font.SysFont("Times New Roman", 18)
+            Label = myFont.render("Timestep:", 1, (0,0,0))
+            ### pass a string to myFont.render
+            time = frame/16
+            Display = myFont.render(str(time), 1, (0,0,0))
+
+            screen.blit(Label, (10, 20))
+            screen.blit(Display, (10, 30))
+            
+            pygame.time.delay(30)
             pygame.display.update()
             
                         

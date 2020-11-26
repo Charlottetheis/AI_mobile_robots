@@ -51,12 +51,19 @@ class human():
     
     
 class robot():
-    def __init__(self, robot_id, start_pos, start_time, goal=None, offline_plan=[]):
+    def __init__(self, robot_id, start_pos, start_time, goal=[], offline_plan=[]):
         self.id = robot_id
         self.start_time = start_time
         self.start_pos = start_pos
         self.plan = offline_plan
         self.goal = goal
+        self.obstacle = dict() # dictionary, time: posiiton of obstacle
+        self.replanning = dict() # dictionary, time: valid path at time
+        self.global_path = None
+        self.global_plan = None
+        self.detour = dict()
+        self.back_at_global_path = dict()
+        self.previous_plan = None
         
     
     def get_resources(self, state, time):
@@ -70,23 +77,23 @@ class robot():
             return []
         else: 
             action = self.plan[time-self.start_time]
-            resources = state.agent_locations[self]
-            if type(action) == MoveAction:
-                resources.append(self.get_full(action.direction.move(state.agent_locations[self][0])))
-            elif type(action) == Enter:
-                resources = [self.get_full(self.start_pos)]
+            resources = state.agent_locations[self].copy()
+            if type(action) == MoveActionRobot:
+                r = [action.direction.move((x,y)) for (x,y) in state.agent_locations[self]]
+                resources+=r
             return resources
-       
-    def plan_to_path(self):
-        path = []
-        position = []
-        for time in range(len(self.plan)): 
-            if type(self.plan[time]) == NoOp:
-                continue
-            else:
-                position = self.plan[time].destination
-            path.append(position)
+
+        
+    def plan_to_path(self, plan=None):
+        if plan==None:
+            plan = self.plan
+        position = plan[0].state.agent_locations[self]
+        path = [set(position)]
+        for time in range(len(plan)): 
+            position = plan[time].destination
+            path.append(set(position))
         return path
+
     
     def get_full(self, coor):
         return [coor,tuple(sum(x) for x in zip((1,0),coor)),\

@@ -13,6 +13,24 @@ class wall_sprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x,y)
         
+class obstacle_sprite(pygame.sprite.Sprite):
+    def __init__(self, coor):
+       # Call the parent class (Sprite) constructor
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface([16,16])
+        self.image.fill((200,1,15))
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(coor[0]*16,coor[1]*16)
+
+        
+class path_sprite(pygame.sprite.Sprite):
+    def __init__(self,coor):
+       # Call the parent class (Sprite) constructor
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface([16,16])
+        self.image.fill((0,150,150))
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(coor[0]*16,coor[1]*16)
         
         
 class human_sprite(pygame.sprite.Sprite):
@@ -56,7 +74,7 @@ class robot_sprite(pygame.sprite.Sprite):
 
     # Constructor. Pass in the color of the block,
     # and its x and y position
-    def __init__(self, plan, start_pos, start_time):
+    def __init__(self, plan, start_pos, start_time, obstacle):
        # Call the parent class (Sprite) constructor
         pygame.sprite.Sprite.__init__(self)
 
@@ -70,6 +88,7 @@ class robot_sprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move([self.start_pos[0]*16,self.start_pos[1]*16])
         self.plan = plan
         self.speed = [0,0]
+        self.obstacle = obstacle
     
     def get_coor(self):
         return [self.rect[0] % width, self.rect[1] % height]

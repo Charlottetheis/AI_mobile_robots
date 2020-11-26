@@ -35,3 +35,16 @@ def manhattan_to_path(agents,paths):
             total_dist += min_dist
         return total_dist
     return h
+
+def manhattan_to_path_robot(robot,path):
+    def h(state):
+        start = state.agent_locations[robot]
+        min_dist = 10000
+        for goal in path:
+            goal = list(goal)
+            dist = abs(start[0][0]-goal[0][0]) + abs(start[0][1]-goal[0][1])
+            if dist < min_dist:
+                min_dist = dist
+        return min_dist
+    return h
+

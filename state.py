@@ -88,4 +88,25 @@ class State():
             return False
         else:
             return True              
-      
+
+        
+class explored_state():
+    def __init__(self, predicates, agents):
+        sp = {pred for pred in predicates if (type(pred) == AgentAt) and (pred.agent in agents)}
+        self.selected_predicates = sp
+        
+    def __eq__(self, other):
+        return self.selected_predicates == other.selected_predicates
+
+    def __hash__(self):
+        return hash(frozenset(self.selected_predicates))
+
+    def __lt__(self, other):
+        # This is used when adding States to a priority queue, to make agents not
+        # contributing to the heuristic to prefer standing still
+        return True     
+        
+        
+        
+        
+        
