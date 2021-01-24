@@ -54,10 +54,13 @@ class NoOp():
     def __init__(self, state, agent):
         self.agent = agent
         self.destination = state.agent_locations[self.agent]
+        if type(self.destination) == list:
+            self.destination = set(self.destination)
         self.state = state
+        self.direction = None
         
     def preconditions(self,state):
-        return {}
+        return set()
 
     def effects(self,state):
         return []
@@ -81,7 +84,6 @@ class MoveAction(Action):
         self.direction = direction
         self.state = state
         self.destination = direction.move(self.state.agent_locations[self.agent])
-        self.box_destination = None
 
     def preconditions(self, state):
         destination = self.direction.move(state.agent_locations[self.agent])
@@ -107,7 +109,7 @@ class MoveActionRobot(Action):
         self.agent = agent
         self.direction = direction
         self.state = state
-        self.destination = [direction.move((x,y)) for (x,y) in self.state.agent_locations[self.agent]]
+        self.destination = {direction.move((x,y)) for (x,y) in self.state.agent_locations[self.agent]}
 
     def preconditions(self,state):
         destination = [self.direction.move((x,y)) for (x,y) in state.agent_locations[self.agent]]

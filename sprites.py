@@ -9,7 +9,7 @@ class wall_sprite(pygame.sprite.Sprite):
        # Call the parent class (Sprite) constructor
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface([16,16])
-        self.image.fill((150,150,150))
+        self.image.fill((153,153,153))
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x,y)
         
@@ -46,9 +46,9 @@ class human_sprite(pygame.sprite.Sprite):
         #self.image = pygame.Surface([16, 16])
         #self.image.fill((255,255,255))
         
-        n = random.randint(1,3)
-        self.image = pygame.image.load("human" + str(n) + ".png")
-
+        #n = random.randint(1,3)
+        #self.image = pygame.image.load("human" + str(n) + ".png")
+        self.image = pygame.image.load("human4.png")
        # Fetch the rectangle object that has the dimensions of the image
        # Update the position of this object by setting the values of rect.x and rect.y
         

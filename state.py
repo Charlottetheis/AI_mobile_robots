@@ -3,15 +3,17 @@ import copy
 from actions import *
 from objects import *
 import copy
+from itertools import chain
 
 
 class State():
-    def __init__(self, map_graph, g, predicates, agent_locations, object_locations, parent=None, action=None):
+    def __init__(self, map_graph, g, t, predicates, agent_locations, object_locations, parent=None, action=None):
         
         self.map = map_graph #static predicates
         
         #for searching
-        self.g = g 
+        self.g = g
+        self.t = t
         self.parent = parent
         self.action = action
         
@@ -21,7 +23,7 @@ class State():
         
         
         
-    def derive_state(self, actions):
+    def derive_state(self, actions, G=None):
         predicates = []
         
         for action in actions:
@@ -30,7 +32,49 @@ class State():
         nal, nol = self.update_locations(predicates)
         new_predicates = self.update_predicates(predicates)
         
-        return State(self.map, self.g+1, new_predicates, nal, nol, parent=self, action=actions)
+        c = 1
+        if G!= None:
+            for action in actions:
+                loc = nal[action.agent]
+                if type(action.agent) == human:
+                    
+                    c += G.nodes[loc]['cost']
+                    
+                else:
+                    if set(loc) in action.agent.goal:
+                        c+=0 #no extra cost to step into goal field
+                    else:
+                        for l in loc:
+                            c += G.nodes[l]['cost']
+                        if type(actions[0]) != NoOp:
+                            c += 0.5
+                        else:
+                            
+                            #coordinates
+                            #w  12 w
+                            #w 8rr3w
+                            #w 7rr4w
+                            #w  65 W
+                            x_coor = {coor[0] for coor in loc}
+                            y_coor = {coor[1] for coor in loc}
+                            coor_1 = (min(x_coor), min(y_coor)-1) 
+                            coor_2 = (max(x_coor), min(y_coor)-1)
+                            coor_3 = (max(x_coor)+1, min(y_coor))
+                            coor_4 = (max(x_coor)+1, max(y_coor))
+                            coor_5 = (max(x_coor), max(y_coor)+1)
+                            coor_6 = (min(x_coor), max(y_coor)+1)
+                            coor_7 = (min(x_coor)-1, min(y_coor))
+                            coor_8 = (min(x_coor)-1, max(y_coor))
+                            
+                            if ((coor_1 not in G.nodes) and (coor_2 not in G.nodes)) or \
+                            ((coor_3 not in G.nodes) and (coor_4 not in G.nodes)) or \
+                            ((coor_4 not in G.nodes) and (coor_6 not in G.nodes)) or \
+                            ((coor_7 not in G.nodes) and (coor_8 not in G.nodes)):
+                                c+=0
+                            else:
+                                c+=0
+        
+        return State(self.map, self.g+c, self.t+1, new_predicates, nal, nol, parent=self, action=actions)
         
         
         
@@ -60,7 +104,10 @@ class State():
     def update_predicates(self,predicates):
         new_predicates = self.predicates.copy()
         for pred in predicates:
-            if type(pred) == Not and pred.pred in new_predicates:
+            if (type(pred) == Not) and (pred.pred.coordinate in chain.from_iterable(self.object_locations.values())):
+                print('Not removing object')
+                print(pred)
+            elif (type(pred) == Not) and (pred.pred in new_predicates):
                 new_predicates.remove(pred.pred)
                 new_predicates.add(Free(pred.pred.coordinate))
             elif type(pred) == Not:
@@ -87,13 +134,16 @@ class State():
         if any([type(action)==NoOp for action in self.action]):
             return False
         else:
-            return True              
+            return True             
 
         
 class explored_state():
-    def __init__(self, predicates, agents):
+    def __init__(self, predicates, agents, actions=None, t=0):
         sp = {pred for pred in predicates if (type(pred) == AgentAt) and (pred.agent in agents)}
+        sp.add(t)
+                                 
         self.selected_predicates = sp
+        self.action = actions
         
     def __eq__(self, other):
         return self.selected_predicates == other.selected_predicates
@@ -102,9 +152,12 @@ class explored_state():
         return hash(frozenset(self.selected_predicates))
 
     def __lt__(self, other):
+        if type(self.action) == NoOp:
+            return False
+        else:
+            return True
         # This is used when adding States to a priority queue, to make agents not
-        # contributing to the heuristic to prefer standing still
-        return True     
+        # contributing to the heuristic to prefer standing still   
         
         
         

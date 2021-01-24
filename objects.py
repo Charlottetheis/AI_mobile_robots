@@ -9,6 +9,7 @@ class human():
         self.start_pos = start_pos
         self.plan = offline_plan
         self.goal = goal
+        self.replan_count = 0
         
     
     def get_resources(self, state, time):
@@ -59,11 +60,13 @@ class robot():
         self.goal = goal
         self.obstacle = dict() # dictionary, time: posiiton of obstacle
         self.replanning = dict() # dictionary, time: valid path at time
-        self.global_path = None
-        self.global_plan = None
+        self.add_actions = 0
+        self.global_plan = offline_plan
         self.detour = dict()
         self.back_at_global_path = dict()
         self.previous_plan = None
+        self.predictions = dict()
+        self.dir_predictions = dict()
         
     
     def get_resources(self, state, time):

@@ -1,13 +1,20 @@
+import math
+
 def manhattan(agent, goal):
     def h(state):
         location = state.agent_locations[agent]
         return abs(location[0]-goal[0]) + abs(location[1]-goal[1])
     return h
 
+def euclidean_dist(location, goal):
+    return math.sqrt((location[0]-goal[0])**2 + (location[1]-goal[1])**2)
+
 def manhattan_robot(agent, goal):
     def h(state):
         location = state.agent_locations[agent]
-        return abs(location[0][0]-goal[0][0]) + abs(location[0][1]-goal[0][1])
+        x_min = min({l[0] for l in location})
+        y_min = min({l[1] for l in location})
+        return abs(x_min-goal[0]) + abs(y_min-goal[1])
     return h
 
 def calculate_manhattan_sum(starts, goals):
@@ -39,10 +46,13 @@ def manhattan_to_path(agents,paths):
 def manhattan_to_path_robot(robot,path):
     def h(state):
         start = state.agent_locations[robot]
+        x_min = min({l[0] for l in start})
+        y_min = min({l[1] for l in start})
         min_dist = 10000
-        for goal in path:
-            goal = list(goal)
-            dist = abs(start[0][0]-goal[0][0]) + abs(start[0][1]-goal[0][1])
+        for goal in path+robot.goal:
+            x_min_goal = min({l[0] for l in goal})
+            y_min_goal = min({l[1] for l in goal})
+            dist = abs(x_min-x_min_goal) + abs(y_min-y_min_goal)
             if dist < min_dist:
                 min_dist = dist
         return min_dist

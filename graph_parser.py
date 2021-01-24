@@ -16,7 +16,6 @@ def parse_map(s):
     y_dim = len(lines)
     x_dim = len(lines[0])
     G = nx.grid_2d_graph(x_dim,y_dim)
-    
 
     # create wall sprite for visualization
     walls = pygame.sprite.RenderUpdates()
@@ -28,17 +27,23 @@ def parse_map(s):
                 walls.add(wall_sprite(x*16,y*16))
             elif char == 'e':
                 G.nodes[(x,y)]['type'] = 'e'
+                G.nodes[(x,y)]['cost'] = 1
             elif char == 's':
                 G.nodes[(x,y)]['type'] = 's'
+                G.nodes[(x,y)]['cost'] = 0
             elif char == ' ':
                 G.nodes[(x,y)]['type'] = 'f'
+                G.nodes[(x,y)]['cost'] = 0
             elif char == 'b':
                 G.nodes[(x,y)]['type'] = 'b'
+                G.nodes[(x,y)]['cost'] = 0
             elif char == 'r':
                 G.nodes[(x,y)]['type'] = 'r'
+                G.nodes[(x,y)]['cost'] = 0
             else:
                 G.nodes[(x,y)]['type'] = 'goal'
                 G.nodes[(x,y)]['number'] = int(char)
+                G.nodes[(x,y)]['cost'] = 0
                 
                 
                 
