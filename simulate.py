@@ -20,10 +20,11 @@ from costmap import *
 from AI_replan import *
 from AI_NN_replan import *
 import pandas as pd
+import time
 
 
 
-def simulate(m, h_n, experiments=[],viz=False):
+def simulate(m, h_n, experiments=[],viz=False, run_no=0):
     data = pd.DataFrame()#[[0,0,0,0,0,0,0,0,0,0,0,0,0,0]],columns=\
                         #['Baseline_Replan','Baseline_Rescue','Baseline_Close_1','Baseline_Close_2','Baseline_len','Baseline_h_len','Baseline_Robot_replan',\
 #                         'AI_Replan','AI_Rescue','AI_Close_1','AI_Close_2','AI_len','AI_h_len','AI_Robot_replan'])
@@ -43,11 +44,11 @@ def simulate(m, h_n, experiments=[],viz=False):
             print(ex)
             r, start_pos = robot_init(G, costmap=None)
             type_replan = baseline_replan(r)
-        if ex == 'AI':
+        if ex == 'Informed':
             print(ex)
             r, start_pos = robot_init(G, costmap=G)
             type_replan = AI_replan(r, G)
-        if ex == 'AINN':
+        if ex == 'AI':
             print(ex)
             r, start_pos = robot_init(G, costmap=G)
             type_replan = AI_NN_replan(r, G)
@@ -79,14 +80,19 @@ def simulate(m, h_n, experiments=[],viz=False):
         count_actions = 0
         count_wrongs = 0
         emergency_stop = 0
+        runtime = 0
         
         while not_finished:
             # Finished robot plan
             if len(r.plan) <= t:
                 not_finished = False
             else:
+                runt0 = time.time()
                 #replanning for robot
                 robot_replan_count_, count_actions_, count_wrongs_ = type_replan(state, t, robot_stop)
+                runt1 = time.time()
+                if robot_replan_count_ == 1:
+                    runtime += (runt1-runt0)
                 
                 #statistics
                 robot_replan_count+=robot_replan_count_
@@ -169,7 +175,7 @@ def simulate(m, h_n, experiments=[],viz=False):
 
         #visualization module
         if viz:
-            visualise(r, humans, beds, sprite_walls)                
+            visualise(r, humans, beds, sprite_walls, run_no, ex)                
 
         #Save statistics
         data.at[0,ex+'_Replan'] = replan_count
@@ -185,6 +191,7 @@ def simulate(m, h_n, experiments=[],viz=False):
         data.at[0,ex+'_h_len'] = h_len
         data.at[0,ex+'_Robot_replan'] = robot_replan_count
         data.at[0,ex+'_accuracy'] = (count_actions-count_wrongs)/count_actions
+        data.at[0,ex+'_runtime'] = runtime/robot_replan_count
         
     return data
        

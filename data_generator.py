@@ -88,7 +88,7 @@ def generate(m, h_n):
                 # Replanning with two humans or one human+passive robot (stopping or continueing)
                 # The robot stops when a human is very close to it
                 agents = humans
-                agents_replanned, actions, back_at_path, robot_stop = replan(state,agents,t, G)
+                agents_replanned, actions, back_at_path, robot_stop, _ = replan(state,agents,t, G)
                 for i, h in enumerate(agents_replanned):
                     if (actions != None) and (type(actions[0]) == list):
                         new_actions = [action for action in chain.from_iterable(actions) if action.agent==h]

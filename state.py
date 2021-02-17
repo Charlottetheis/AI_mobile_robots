@@ -43,36 +43,14 @@ class State():
                 else:
                     if set(loc) in action.agent.goal:
                         c+=0 #no extra cost to step into goal field
-                    else:
-                        for l in loc:
-                            c += G.nodes[l]['cost']
+                    else:       
                         if type(actions[0]) != NoOp:
                             c += 0.5
+                            for l in loc:
+                                c += G.nodes[l]['cost']
                         else:
-                            
-                            #coordinates
-                            #w  12 w
-                            #w 8rr3w
-                            #w 7rr4w
-                            #w  65 W
-                            x_coor = {coor[0] for coor in loc}
-                            y_coor = {coor[1] for coor in loc}
-                            coor_1 = (min(x_coor), min(y_coor)-1) 
-                            coor_2 = (max(x_coor), min(y_coor)-1)
-                            coor_3 = (max(x_coor)+1, min(y_coor))
-                            coor_4 = (max(x_coor)+1, max(y_coor))
-                            coor_5 = (max(x_coor), max(y_coor)+1)
-                            coor_6 = (min(x_coor), max(y_coor)+1)
-                            coor_7 = (min(x_coor)-1, min(y_coor))
-                            coor_8 = (min(x_coor)-1, max(y_coor))
-                            
-                            if ((coor_1 not in G.nodes) and (coor_2 not in G.nodes)) or \
-                            ((coor_3 not in G.nodes) and (coor_4 not in G.nodes)) or \
-                            ((coor_4 not in G.nodes) and (coor_6 not in G.nodes)) or \
-                            ((coor_7 not in G.nodes) and (coor_8 not in G.nodes)):
-                                c+=0
-                            else:
-                                c+=0
+                            for l in loc:
+                                c += G.nodes[l]['cost']
         
         return State(self.map, self.g+c, self.t+1, new_predicates, nal, nol, parent=self, action=actions)
         

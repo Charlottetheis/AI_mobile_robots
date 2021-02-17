@@ -14,6 +14,7 @@ import pandas as pd
 import os
 from ast import literal_eval
 from actions import *
+from heuristics import *
 
 
 def transform(data, idx):
@@ -93,9 +94,13 @@ def predict_data(data_old, model):
         data.loc[idx, 'prediction'] = predictions.data.numpy()
         data.at[idx, 'predict_loc'] = pred_to_action(predictions.data.numpy(), data.loc[idx, 'agent_loc'])
         correct = 0
+        correct_2 = 0
         if data.at[idx, 'agent_loc'] == data.at[idx, 'true_agent_loc']:
             correct = 1
+        if euclidean_dist(data.at[idx, 'agent_loc'], data.at[idx, 'true_agent_loc']) < 3:
+            correct_2 = 1
         data.at[idx,'pos_acc'] = correct
+        data.at[idx,'pos_acc_2'] = correct_2
     return data
 
 

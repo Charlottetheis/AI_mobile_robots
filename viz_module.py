@@ -4,8 +4,9 @@ from sprites import *
 from graph_parser import *
 import random
 import sys
+import math
 
-def visualise(r, humans, beds, sprite_walls):
+def visualise(r, humans, beds, sprite_walls, run_no, ex):
     size = width, height = 416, 528
     screen = pygame.display.set_mode(size) 
     frame = 0
@@ -68,18 +69,26 @@ def visualise(r, humans, beds, sprite_walls):
         #sprite_paths.draw(screen)
         sprite_objects.draw(screen)
         sprite_humans.draw(screen)
-        sprite_obstacles.draw(screen)
+        #sprite_obstacles.draw(screen)
         sprite_robots.draw(screen)
 
         pygame.font.init()
         myFont = pygame.font.SysFont("Times New Roman", 18)
         Label = myFont.render("Timestep:", 1, (0,0,0))
+        Label2 = myFont.render("Run:", 1, (0,0,0))
+        Label3 = myFont.render("Type:", 1, (0,0,0))
         ### pass a string to myFont.render
-        time = frame/16
+        time = math.floor(frame/16)
         Display = myFont.render(str(time), 1, (0,0,0))
+        Display2 = myFont.render(str(run_no), 1, (0,0,0))
+        Display3 = myFont.render(ex, 1, (0,0,0))
 
-        screen.blit(Label, (10, 20))
-        screen.blit(Display, (10, 30))
+        screen.blit(Label, (5, 41))
+        screen.blit(Label2, (5, 1))
+        screen.blit(Label3, (5, 21))
+        screen.blit(Display, (85, 41))
+        screen.blit(Display2, (85, 1))
+        screen.blit(Display3, (85, 21))
 
         pygame.time.delay(30)
         pygame.display.update()

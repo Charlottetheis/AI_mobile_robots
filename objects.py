@@ -67,6 +67,7 @@ class robot():
         self.previous_plan = None
         self.predictions = dict()
         self.dir_predictions = dict()
+        self.probs_predictions = dict()
         
     
     def get_resources(self, state, time):

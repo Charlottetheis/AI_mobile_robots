@@ -25,9 +25,8 @@ def AI_replan(r, G):
                     if (action.agent, t-1) not in r.predictions:
                         r.predictions[(action.agent, t-1)] = action.destination
                         r.dir_predictions[(action.agent, t-1)] = dir_to_num(action.direction)
-                        # Can only predict if the past five time steps are in memory
-                        if all([(action.agent, t-x) in r.predictions for x in [2,3,4,5]]):
-                            predict(state, action.agent, r, t)# Predict ten time steps ahead
+                        # Can only predict if the past time step is in memory
+                        predict(state, action.agent, r, t)# Predict 15 time steps ahead
                             
                     else: #check if prediction is correct 
                         count_actions+=1
@@ -37,8 +36,8 @@ def AI_replan(r, G):
                             new_predictions.append(action.agent)
                             predict(state, action.agent, r, t, correct_action=action) #repredict
 
-                        
-                        predict(state, action.agent, r, t) # Predict ten time steps ahead
+                        else:
+                            predict(state, action.agent, r, t) # Predict 15 time steps ahead
 
             if robot_stop <= 0:
                 delete_list = []

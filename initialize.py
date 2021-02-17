@@ -87,7 +87,8 @@ def robot_init(G, costmap):
     ############## Initialize robot #############################
     free_predicates = {Free((x,y)) for (x,y),att in G.nodes('type') if att in ['f','e','s', 'b','goal','r']}
     start_pos=robot_start[0]
-    r = robot(0, start_pos, start_time=0, offline_plan=[])
+    r = robot(0, start_pos, start_time=0, goal=[], offline_plan=[])
+    print(r.goal)
     start = start_pos
     for i in range(1,len(robot_goals)+2):
         preds = free_predicates.copy()

@@ -31,9 +31,12 @@ def prediction(agent, t):
     
 #Prediction using the NN
 def predict_NN(state, agent, r, t, model, correct_action=None):
+    if not all([(agent, t-x) in r.predictions for x in [2,3,4,5,6]]):
+        return False
     if correct_action!=None:
         r.predictions[(agent, t-1)] = correct_action.destination
         r.dir_predictions[(agent, t-1)] = dir_to_num(correct_action.direction)
+        r.probs_predictions[(agent, t)] = [0,0,0,0,0]
     agent_dic = dict()
     for pred in r.predictions.keys():
         if pred[1] in agent_dic:
@@ -48,11 +51,11 @@ def predict_NN(state, agent, r, t, model, correct_action=None):
     #if prediction was wrong; predict all over
     if correct_action!=None:
         for time in range(15):
-            if r.predictions[(agent, time+t-1)] in exit: 
+            if r.predictions[(agent, time+t-1)] in exit:
                 break
             else:
                 prediction_NN(df, state, t, time, agent_dic, agent, r, model)
-            
+      
     #Only predict the missing time step; usually just the tenth, or all 10 for first time prediction
     else:
         for time in range(15):
@@ -61,7 +64,6 @@ def predict_NN(state, agent, r, t, model, correct_action=None):
             elif (agent, t+time) not in r.predictions:
                 prediction_NN(df, state, t, time, agent_dic, agent, r, model)
                 
-    
 def prediction_NN(df, state, t, time, agent_dic, agent, r, model):
     obj_dic = list(chain.from_iterable(state.object_locations.values()))
     df.at[time,'query_state'] = new_state(state.map, r.predictions[(agent, t+time-1)], obj_dic, agent_dic, t+time)
@@ -79,17 +81,26 @@ def prediction_NN(df, state, t, time, agent_dic, agent, r, model):
     sample = transform(df, time)
     output = model(sample)
     
-    dir_prediction = torch.sort(output['out'], 1, descending=True)[1]
-    for direction in dir_prediction[0]:
+    val_valid = torch.tensor([])
+    dirs = []
+    locs = []
+    probs = [0,0,0,0,0]
+    sort, indices = torch.sort(output['out'], 1, descending=True)
+    for direction in indices[0]:
         loc = pred_to_action(direction, r.predictions[(agent, t+time-1)])
         if (loc in state.map.nodes()) and (loc not in obj_dic):
-            break
+            val_valid = torch.cat((val_valid, output['out'][0][direction].unsqueeze_(0)), 0)
+            locs.append(loc)
+            dirs.append(direction)
+    valid_probs = torch.softmax(val_valid, 0)
+    for i, direction in enumerate(dirs):
+        probs[int(direction)] = float(valid_probs[i])
     
-    r.dir_predictions[(agent, t+time)] = direction
-    #print(loc)
-    #print(output)
-    r.predictions[(agent, t+time)] = loc
+    #update dictionaries    
+    r.probs_predictions[(agent, t+time)] = probs
+    r.dir_predictions[(agent, t+time)] = int(dirs[0])
+    r.predictions[(agent, t+time)] = locs[0]
+    
     if time+t in agent_dic:
         agent_dic[time+t].append(loc)
     else: agent_dic[time+t]=loc 
-    

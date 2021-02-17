@@ -1,5 +1,6 @@
 from objects import *
 from actions import *
+from NN_helpers import *
 
 
 def global_costmap(G):
@@ -21,56 +22,21 @@ def global_costmap(G):
                 G.nodes[node]['cost'] += 1
     return G
     
-def local_costmap(state, r, t, G):
+def local_costmap(state, r, t, G, true_time=0):
     #Dyrt rundt om agenter
     for agent, time in r.predictions:
         if (time==(t)):
-            coor = r.predictions[(agent, time)]
-            direction = r.dir_predictions[(agent, time)]
-            G.nodes[coor]['cost'] += 92
-            for c in G[coor]: #increase all neighbours by 2
-                G.nodes[c]['cost'] += 4
-            coor_neigh = []
-            if direction == 0: #north
-                coor_neigh = [tuple(sum(x) for x in zip((1,1),coor)), tuple(sum(x) for x in zip((0,-1),coor)), \
-                              tuple(sum(x) for x in zip((1,0),coor)), tuple(sum(x) for x in zip((0,1),coor)), \
-                              tuple(sum(x) for x in zip((2,1),coor)), tuple(sum(x) for x in zip((0,-2),coor)),\
-                              tuple(sum(x) for x in zip((-1,-1),coor))]
-            elif direction == 1: #south
-                coor_neigh = [tuple(sum(x) for x in zip((-1,-1),coor)), tuple(sum(x) for x in zip((0,1),coor)), \
-                              tuple(sum(x) for x in zip((-1,0),coor)), tuple(sum(x) for x in zip((0,-1),coor)), \
-                              tuple(sum(x) for x in zip((-2,-1),coor)), tuple(sum(x) for x in zip((0,2),coor)), \
-                              tuple(sum(x) for x in zip((1,1),coor))]
-            elif direction == 2: #east
-                coor_neigh = [tuple(sum(x) for x in zip((-1,1),coor)), tuple(sum(x) for x in zip((1,0),coor)), \
-                              tuple(sum(x) for x in zip((0,1),coor)), tuple(sum(x) for x in zip((-1,0),coor)), \
-                              tuple(sum(x) for x in zip((-1,2),coor)), tuple(sum(x) for x in zip((2,0),coor)), \
-                              tuple(sum(x) for x in zip((1,-1),coor))]
-            elif direction == 3: #west
-                coor_neigh = [tuple(sum(x) for x in zip((1,-1),coor)), tuple(sum(x) for x in zip((-1,0),coor)), \
-                              tuple(sum(x) for x in zip((0,-1),coor)), tuple(sum(x) for x in zip((1,0),coor)), \
-                              tuple(sum(x) for x in zip((1,-2),coor)), tuple(sum(x) for x in zip((-2,0),coor)), \
-                              tuple(sum(x) for x in zip((-1,1),coor))]
+            if (time==true_time) and (r.probs_predictions!={}):
+                probs = r.probs_predictions[(agent, time)]
+                for d, p in enumerate(probs):
+                    coor = pred_to_action(d, r.predictions[(agent, time-1)])
+                    if p > 0:
+                        agent_cost(coor, d, p, G)
+            else:    
+                coor = r.predictions[(agent, time)]
+                direction = r.dir_predictions[(agent, time)]
+                agent_cost(coor, direction, 1, G)
             
-            for i, c in enumerate(coor_neigh):
-                if c in G.nodes:
-                    #if i == 0:
-                    #    G.nodes[c]['cost'] += 4
-                    if i in [1, 2]:
-                        G.nodes[c]['cost'] += 4
-                    elif i == 3:
-                        G.nodes[c]['cost'] += 96
-                    elif i == 4:
-                        G.nodes[c]['cost'] += 4
-                    elif i == 5:
-                        G.nodes[c]['cost'] += 4
-                    elif i == 6:
-                        G.nodes[c]['cost'] += 4
-                    if i in [2, 3]:
-                        for c2 in G[coor_neigh[i]]: #neighbour on the right side
-                            G.nodes[c2]['cost'] += 4
-
-
     #Dyrt at gå i venstre side af gangen
 
     #coordinates
@@ -163,7 +129,61 @@ def local_costmap_human(state, h, t, G):
             
             
     
-    
+def agent_cost(coor, direction, p, G):
+    G.nodes[coor]['cost'] += 92*p
+    for c in G[coor]: #increase all neighbours by 4
+        G.nodes[c]['cost'] += 4*p
+    coor_neigh = []
+    if direction == 0: #north
+        coor_neigh = [tuple(sum(x) for x in zip((1,1),coor)), tuple(sum(x) for x in zip((0,-1),coor)), \
+                      tuple(sum(x) for x in zip((1,0),coor)), tuple(sum(x) for x in zip((0,1),coor)), \
+                      tuple(sum(x) for x in zip((2,1),coor)), tuple(sum(x) for x in zip((0,-2),coor)),\
+                      tuple(sum(x) for x in zip((-1,-1),coor))]
+    elif direction == 1: #south
+        coor_neigh = [tuple(sum(x) for x in zip((-1,-1),coor)), tuple(sum(x) for x in zip((0,1),coor)), \
+                      tuple(sum(x) for x in zip((-1,0),coor)), tuple(sum(x) for x in zip((0,-1),coor)), \
+                      tuple(sum(x) for x in zip((-2,-1),coor)), tuple(sum(x) for x in zip((0,2),coor)), \
+                      tuple(sum(x) for x in zip((1,1),coor))]
+    elif direction == 2: #east
+        coor_neigh = [tuple(sum(x) for x in zip((-1,1),coor)), tuple(sum(x) for x in zip((1,0),coor)), \
+                      tuple(sum(x) for x in zip((0,1),coor)), tuple(sum(x) for x in zip((-1,0),coor)), \
+                      tuple(sum(x) for x in zip((-1,2),coor)), tuple(sum(x) for x in zip((2,0),coor)), \
+                      tuple(sum(x) for x in zip((1,-1),coor))]
+    elif direction == 3: #west
+        coor_neigh = [tuple(sum(x) for x in zip((1,-1),coor)), tuple(sum(x) for x in zip((-1,0),coor)), \
+                      tuple(sum(x) for x in zip((0,-1),coor)), tuple(sum(x) for x in zip((1,0),coor)), \
+                      tuple(sum(x) for x in zip((1,-2),coor)), tuple(sum(x) for x in zip((-2,0),coor)), \
+                      tuple(sum(x) for x in zip((-1,1),coor))]
+    elif direction == 4:
+        G.nodes[coor]['cost'] += 8*p #to get to 100
+        for c in G[coor]: #increase all neighbours by 4
+            G.nodes[c]['cost'] += 4*p #to get to 8
+        diags = [tuple(sum(x) for x in zip((1,1),coor)), tuple(sum(x) for x in zip((1,-1),coor)),\
+                 tuple(sum(x) for x in zip((-1,1),coor)), tuple(sum(x) for x in zip((-1,-1),coor))]
+        for c in diags:
+            if c in G.nodes:
+                G.nodes[c]['cost'] += 4*p
+
+    for i, c in enumerate(coor_neigh):
+        if c in G.nodes:
+            #if i == 0:
+            #    G.nodes[c]['cost'] += 4
+            if i in [1, 2]:
+                G.nodes[c]['cost'] += 4*p
+            elif i == 3:
+                G.nodes[c]['cost'] += 96*p
+            elif i == 4:
+                G.nodes[c]['cost'] += 4*p
+            elif i == 5:
+                G.nodes[c]['cost'] += 4*p
+            elif i == 6:
+                G.nodes[c]['cost'] += 4*p
+            if i in [2, 3]:
+                for c2 in G[coor_neigh[i]]: #neighbour on the right side
+                    G.nodes[c2]['cost'] += 4*p
+
+
+
     
     
     
