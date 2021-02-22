@@ -13,3 +13,5 @@ Requirements:
 Python 3.6 or later versions and Jupyter Notebook.
 Packages to install: Networkx, Pygame, Math, Random, Pandas, Itertools, Numpy, Time, Queue, Copy, Ast, Pytorch, Glob, Os,
 Argparse, Pickle, Seaborn, Matplotlib
+
+convlstm.py is an external resources.
