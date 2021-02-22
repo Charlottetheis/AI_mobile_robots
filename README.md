@@ -8,3 +8,8 @@ The second is the number of additional human agents. The third (Experiments) tak
 This is set to all three types. The viz parameter is True or False depending on whether an animation is desired. 
 The run_no parameter takes an id for easier identification of the run. The simulation returns summary statistics 
 for each run and each type of robot, this is stored in the data frame named data_all.
+
+Requirements:
+Python 3.6 or later versions and Jupyter Notebook.
+Packages to install: Networkx, Pygame, Math, Random, Pandas, Itertools, Numpy, Time, Queue, Copy, Ast, Pytorch, Glob, Os,
+Argparse, Pickle, Seaborn, Matplotlib
